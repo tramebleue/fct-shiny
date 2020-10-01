@@ -1,14 +1,19 @@
+library(shiny)
 library(sf)
 library(dplyr)
 library(purrr)
 library(tidyr)
-library(shiny)
+library(forcats)
 library(leaflet)
-library(plotly)
+# library(plotly)
 library(tidync)
 library(scales)
 
-setwd('/Volumes/Backup/PRODUCTION/GrandsAxes/Isere/AXES/AX0002')
+source('./plots/planform.R', local = TRUE)
+source('./plots/talwegHeight.R', local = TRUE)
+source('./plots/elevationSwathProfile.R', local = TRUE)
+
+setwd('/media/crousson/Backup/PRODUCTION/GrandsAxes/Isere/AXES/AX0002')
 
 box2polygon = function(xmin, ymin, xmax, ymax, crs) {
   # print(class(x))
@@ -36,8 +41,6 @@ swaths = tidync('TEMP/VALLEY_SWATH_BOUNDS.nc') %>%
 # swp = swaths %>%
 #   mutate(geometry = geometries$geometry) %>%
 #   st_sf()
-
-planform = tidync('METRICS/PLANFORM.nc') %>% hyper_tibble()
 
 ui = fluidPage(
   
@@ -224,20 +227,23 @@ server = function(input, output, session) {
       
     }
     
-    if ((x < state$xmin) || (x > state$xmax)) {
+    if (x < state$xmin | x > state$xmax) {
       
       delta = state$xmax - state$xmin
       label_min = round((x - 0.5*delta + 100) / 200)
       label_max = round((x + 0.5*delta + 100) / 200)
       
-      bounds = as.numeric(swaths %>%
+      bounds = swaths %>%
         filter(label >= label_min & label <= label_max) %>%
         st_transform(4326) %>%
-        st_bbox())
+        st_bbox()
       
         leafletProxy("mymap") %>%
-          # fitBounds(bounds$xmin, bounds$ymin, bounds$xmax, bounds$ymax)
-          fitBounds(bounds[1], bounds[2], bounds[3], bounds[4])
+          fitBounds(
+            as.numeric(bounds$xmin),
+            as.numeric(bounds$ymin),
+            as.numeric(bounds$xmax),
+            as.numeric(bounds$ymax))
       
     }
   
@@ -268,96 +274,36 @@ server = function(input, output, session) {
   output$plot1 = renderPlot({
     
     # domain = get_mbox()
-    xmin = state$xmin
-    xmax = state$xmax
-    span = xmax - xmin
-    domain = data.frame(xmin = xmin, xmax = xmax)
+    x = state$selected_measure
     
-    if (is_empty(domain)) {
+    # isolate({
       
-      plot = ggplot(planform) +
-        geom_line(aes(x = measure, y = talweg_shift), color = 'darkgray', size = 0.8)
+      xmin = state$xmin
+      xmax = state$xmax
       
-    } else {
-    
-      xmin_ = max(min(planform$measure), xmin - 2*span)
-      xmax_ = min(max(planform$measure), xmax + 2*span)
+      # plotPlanform(x, xmin, xmax)
+      plotTalwegHeight(x, xmin, xmax)
       
-      selection = planform %>%
-        filter((measure >= xmin_) & (measure) < xmax_)
-      
-      plot = ggplot(selection) +
-        geom_rect(
-          data = domain,
-          aes(xmin = xmin, xmax = xmax),
-          ymin = -Inf, ymax = Inf,
-          fill = 'darkgreen', colour = NA, alpha=0.1) +
-        geom_rect(
-          data = domain,
-          aes(xmin = xmin, xmax = xmax),
-          ymin = -Inf, ymax = Inf,
-          fill = NA, colour = 'darkgreen', linetype = 'dotted', size = 0.8, alpha=0.8) +
-        geom_line(aes(x = measure, y = talweg_shift), color = 'darkgray', size = 0.8)
-      
-      if (!is_empty(state$selected_measure)) {
-        plot = plot +
-          geom_vline(xintercept = state$selected_measure, color = 'darkred', size = 0.8, alpha=0.7)
-      }
-        
-    }
-    
-    plot +
-      scale_x_reverse(labels=unit_format(scale=1e-3, unit='km')) +
-      scale_y_continuous(labels=unit_format(scale=1, unit='m')) +
-      xlab('Location along reference axis') +
-      ylab('Distance to reference axis') +
-      ggtitle('Talweg shift from reference axis') +
-      theme_bw()
+    # })
     
   })
   
   output$plot2 = renderPlot({
     
-    data = get_swath_profile()
+    profile = get_swath_profile()
     
-    if (is.null(data)) {
+    if (is_empty(profile)) {
       return ()
     }
     
-    ggplot(data) +
-      geom_line(
-        aes(
-          x = -sw_axis_distance,
-          y = sw_elevation_abs_0.5),
-        color = '#48638a',
-        size = 1) +
-      geom_ribbon(
-        aes(
-          x = -sw_axis_distance,
-          ymin = sw_elevation_abs_0.05,
-          ymax = sw_elevation_abs_0.95),
-        fill = '#b9d8e6',
-        color = 'gray',
-        size = 0.7,
-        linetype = 'dotted',
-        alpha = 0.2) +
-      geom_ribbon(
-        aes(
-          x = -sw_axis_distance,
-          ymin = sw_elevation_abs_0.25,
-          ymax = sw_elevation_abs_0.75),
-        fill = '#48638a',
-        color = 'gray',
-        size = 0.5,
-        alpha = 0.5) +
-      scale_x_continuous(
-        labels = unit_format(scale=1, unit='m'),
-        name = 'Distance from reference axis') +
-      scale_y_continuous(
-        labels = unit_format(scale=1, unit='m'),
-        name = 'Altitude NGF') +
-      ggtitle('Elevation swath profile') +
-      theme_bw()
+    isolate({
+      
+      label = state$selected_feature$label
+      pk = round(state$selected_measure / 1000, 1)
+      
+      plotElevationSwathProfile(profile, label, pk)
+      
+    })
     
   })
   
