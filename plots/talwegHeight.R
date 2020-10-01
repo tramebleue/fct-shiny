@@ -1,15 +1,7 @@
-plotTalwegHeight = function(x, xmin, xmax) {
+plotTalwegHeight = function(heights, x, xmin, xmax) {
   
   span = xmax - xmin
   domain = data.frame(xmin = xmin, xmax = xmax)
-  
-  heights = tidync('METRICS/TALWEG_RELATED.nc') %>%
-    hyper_tibble() %>%
-    pivot_wider(
-      id_cols = c(swath, measure),
-      names_from = talweg_height_is_interpolated,
-      values_from = c(talweg_height_min, talweg_height_median)) %>%
-    arrange(measure)
   
   if (is_empty(domain)) {
     

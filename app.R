@@ -5,9 +5,18 @@ library(purrr)
 library(tidyr)
 library(forcats)
 library(leaflet)
-# library(plotly)
-library(tidync)
+library(ggplot2)
 library(scales)
+library(jsonlite)
+library(glue)
+
+# library(promises)
+# library(future)
+# plan(multiprocess)
+
+host = 'localhost'
+port = 3098
+crs = 2154
 
 source('./plots/planform.R', local = TRUE)
 source('./plots/talwegHeight.R', local = TRUE)
@@ -23,17 +32,6 @@ box2polygon = function(xmin, ymin, xmax, ymax, crs) {
   st_as_sfc()
 }
 
-swaths = tidync('TEMP/VALLEY_SWATH_BOUNDS.nc') %>%
-  hyper_tibble() %>%
-  pivot_wider(
-    id_cols = label,
-    names_from = coord,
-    values_from = bounds) %>%
-  mutate(
-    x = .5 * (minx + maxx),
-    y = .5* (miny + maxy)) %>%
-  st_as_sf(coords = c('x', 'y'), crs = st_crs(2154))
-
 # geometries = pmap_dfr(
 #   list(swaths$minx, swaths$miny, swaths$maxx, swaths$maxy),
 #   ~ data.frame(geometry = box2polygon(..1, ..2, ..3, ..4, 2154)))
@@ -41,6 +39,7 @@ swaths = tidync('TEMP/VALLEY_SWATH_BOUNDS.nc') %>%
 # swp = swaths %>%
 #   mutate(geometry = geometries$geometry) %>%
 #   st_sf()
+
 
 ui = fluidPage(
   
@@ -83,26 +82,26 @@ ui = fluidPage(
 server = function(input, output, session) {
   
   state = reactiveValues()
+    
+  swaths = fromJSON(glue('http://{host}:{port}/swaths')) %>%
+    mutate(
+      map_dfr(
+        .$geometry$coordinates,
+        ~ data.frame(x = .x[1], y = .x[2]))) %>%
+    st_as_sf(
+      coords = c('x', 'y'),
+      crs = crs)
+  
+  heights = fromJSON(glue('http://{host}:{port}/lp/talweg/height'))
   
   get_swath_profile = reactive({
     
-    if (is_empty(state$selected_measure)) {
+    if (is_empty(state$selected_feature)) {
       return (NULL)
     }
-    
-    profiles = tidync('METRICS/ELEVATION_SWATH_PROFILES.nc', what='D1') %>%
-      hyper_tibble() %>%
-      filter(sw_measure == state$selected_measure)
-    
-    tidync('METRICS/ELEVATION_SWATH_PROFILES.nc', what='D2,D1') %>%
-      hyper_tibble(profile = profile %in% profiles$profile) %>%
-      left_join(profiles, by = 'profile') %>%
-      pivot_wider(
-        id_cols = c(profile, sw_measure, sw_axis_distance),
-        names_from = quantile,
-        names_prefix = 'sw_elevation_abs_',
-        values_from = sw_elevation_abs)%>%
-      arrange(sw_axis_distance)
+      
+    id = state$selected_feature$label
+    fromJSON(glue('http://{host}:{port}/swath/{id}/elevation'))
     
   })
   
@@ -282,7 +281,7 @@ server = function(input, output, session) {
       xmax = state$xmax
       
       # plotPlanform(x, xmin, xmax)
-      plotTalwegHeight(x, xmin, xmax)
+      plotTalwegHeight(heights, x, xmin, xmax)
       
     # })
     
