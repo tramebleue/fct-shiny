@@ -14,13 +14,13 @@ library(glue)
 # library(future)
 # plan(multiprocess)
 
-host = 'localhost'
+host = 'plumber'
 port = 3098
 crs = 2154
 
-# source('plots/planform.R', local = TRUE)
-# source('plots/talwegHeight.R', local = TRUE)
-# source('plots/elevationSwathProfile.R', local = TRUE)
+# source('planform.R', local = TRUE)
+# source('talwegHeight.R', local = TRUE)
+# source('elevationSwathProfile.R', local = TRUE)
 # setwd('/media/crousson/Backup/PRODUCTION/GrandsAxes/Isere/AXES/AX0002')
 
 box2polygon = function(xmin, ymin, xmax, ymax, crs) {
@@ -82,11 +82,11 @@ server = function(input, output, session) {
   
   state = reactiveValues()
     
-  swaths = fromJSON(glue('http://{host}:{port}/swaths')) %>%
-    mutate(
-      map_dfr(
-        .$geometry$coordinates,
-        ~ data.frame(x = .x[1], y = .x[2]))) %>%
+  swaths = fromJSON(glue('http://{host}:{port}/swaths'))
+  xy = map_dfr(swaths$geometry$coordinates, ~ list(x = .x[1], y = .x[2]))
+  
+  swaths = swaths %>%
+    mutate(x = xy$x, y= xy$y) %>%
     st_as_sf(
       coords = c('x', 'y'),
       crs = crs)
@@ -162,11 +162,38 @@ server = function(input, output, session) {
     points = swaths %>% st_transform(4326)
     bounds = as.numeric(st_bbox(points))
     
+    wmts = function(layer) {
+      
+      paste0("http://localhost:8010/ogc/isere?",
+        "REQUEST=GetTile&SERVICE=WMTS&VERSION=1.0.0",
+        "&STYLE=normal",
+        "&TILEMATRIXSET=EPSG:3857",
+        "&FORMAT=image/png",
+        "&LAYER=",
+        layer,
+        "&TILEMATRIX={z}",
+        "&TILEROW={y}",
+        "&TILECOL={x}"
+      )
+      
+    }
+    
     leaflet() %>%
+      addTiles(group = "OSM") %>%
       addProviderTiles(
         providers$Stamen.TonerLite,
-        options = providerTileOptions(noWrap = TRUE)
+        options = providerTileOptions(noWrap = TRUE),
+        group = 'TonerLite'
       ) %>%
+      addTiles(urlTemplate = wmts('height_fp'), group = 'Height') %>%
+      addTiles(urlTemplate = wmts('continuity'), group = 'Continuity') %>%
+      addTiles(urlTemplate = wmts('unit_swath'), group = 'Swath units') %>%
+      addTiles(urlTemplate = wmts('spatial_ref'), group = 'Pk') %>%
+      addLayersControl(
+        baseGroups = c('TonerLite', 'OSM'),
+        overlayGroups = c("Height", "Continuity", "Swath units", "Pk"),
+        options = layersControlOptions(collapsed = FALSE)) %>%
+      hideGroup('Continuity') %>%
       # addMarkers(data = points) %>%
       # fitBounds(4.85, 44.97, 7.09, 45.67)
       # fitBounds(bounds$xmin, bounds$ymin, bounds$xmax, bounds$ymax)
@@ -307,13 +334,14 @@ server = function(input, output, session) {
   
 }
 
-runApp = function(host = '0.0.0.0', port = 3038) {
+runApp = function(host = '0.0.0.0', port = 3838) {
   shiny::runApp(
     list(
       ui = ui,
       server = server
     ),
-    host = host)
+    host = host,
+    port = port)
 }
 
 if (interactive()) {

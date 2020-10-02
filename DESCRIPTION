@@ -12,18 +12,15 @@ BugReports: https://github.com/crousson/fct-shiny/issues
 License: GPL3
 Depends:
   R (>= 3.6),
+  curl,
   glue,
   jsonlite,
   plumber,
   shiny,
   sf,
-  dplyr,
-  purrr,
-  tidyr,
-  forcats,
+  tidyverse,
   scales,
-  leaflet,
-  ggplot2
+  leaflet
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.0.2

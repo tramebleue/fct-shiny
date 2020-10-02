@@ -1,2 +1,4 @@
 export(runApp)
-export(runApi)
+export(plotElevationSwathProfile)
+export(plotPlanform)
+export(plotTalwegHeight)
