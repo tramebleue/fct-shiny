@@ -1,0 +1,14 @@
+library(remotes)
+remotes::install_cran(c(
+  "withr",
+  "xfun",
+  "jsonlite",
+  "tidync",
+  "sf",
+  "dplyr",
+  "tidyr",
+  "purrr",
+  "forcats",
+  "plumber",
+  "scales",
+  "leaflet"))

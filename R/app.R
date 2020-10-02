@@ -18,11 +18,10 @@ host = 'localhost'
 port = 3098
 crs = 2154
 
-source('./plots/planform.R', local = TRUE)
-source('./plots/talwegHeight.R', local = TRUE)
-source('./plots/elevationSwathProfile.R', local = TRUE)
-
-setwd('/media/crousson/Backup/PRODUCTION/GrandsAxes/Isere/AXES/AX0002')
+# source('plots/planform.R', local = TRUE)
+# source('plots/talwegHeight.R', local = TRUE)
+# source('plots/elevationSwathProfile.R', local = TRUE)
+# setwd('/media/crousson/Backup/PRODUCTION/GrandsAxes/Isere/AXES/AX0002')
 
 box2polygon = function(xmin, ymin, xmax, ymax, crs) {
   # print(class(x))
@@ -308,4 +307,15 @@ server = function(input, output, session) {
   
 }
 
-shinyApp(ui, server)
+runApp = function(host = '0.0.0.0', port = 3038) {
+  shiny::runApp(
+    list(
+      ui = ui,
+      server = server
+    ),
+    host = host)
+}
+
+if (interactive()) {
+  shinyApp(ui, server) 
+}

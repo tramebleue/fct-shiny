@@ -1,0 +1,33 @@
+Package: fct.shiny
+Type: Package
+Title: Fluvial corridor toolbox web interface
+Version: 0.1
+Date: 2020-10-02
+Authors@R: person("Christophe", "Rousson",
+                  email = "christophe.rousson@ens-lyon.fr",
+                  role = c("aut", "cre"))
+Description: Fluvial corridor toolbox web interface
+URL: https://github.com/crousson/fct-shiny
+BugReports: https://github.com/crousson/fct-shiny/issues
+License: GPL3
+Depends:
+  R (>= 3.6),
+  glue,
+  jsonlite,
+  plumber,
+  shiny,
+  sf,
+  dplyr,
+  purrr,
+  tidyr,
+  forcats,
+  scales,
+  leaflet,
+  ggplot2
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.0.2
+Roxygen: list(markdown = TRUE)
+Suggests: 
+    knitr,
+    rmarkdown
