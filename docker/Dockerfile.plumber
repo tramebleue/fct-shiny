@@ -1,0 +1,25 @@
+FROM rocker/shiny-verse:3.6.3
+MAINTAINER crousson
+
+RUN apt-get update && apt-get install -y \
+  libssl-dev \
+  libcurl4-gnutls-dev \
+  libudunits2-dev \
+  libgdal-dev \
+  libsodium-dev 
+
+RUN install2.r --error \
+      --deps TRUE \
+      withr \
+      xfun \
+      jsonlite \
+      tidync \
+      sf \
+      plumber \
+      scales \
+      leaflet \
+    && rm -rf /tmp/downloaded_packages
+
+EXPOSE 3098
+ENTRYPOINT ["r", "-e", "pr <- plumber::plumb(argv[1]); pr$run(host='0.0.0.0', port=3098)"]
+CMD ["/usr/local/lib/R/site-library/plumber/examples/04-mean-sum/plumber.R"]
