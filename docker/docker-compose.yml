@@ -2,16 +2,19 @@ version: '3'
 services:
   wxs:
     image: openquake/qgis-server:ltr
+    container_name: fct-wxs
     environment:
       QGIS_USER: '${QGS_USER}'
     volumes:
       - ${QGS_DATA}:/io/data
     ports:
       - ${QGS_SERVER_PORT}:80
+    restart: always
   plumber:
     build:
       context: .
       dockerfile: Dockerfile.plumber
+    container_name: fct-api
     command: ['/opt/api.R']
     environment:
       FCT_DATA: /io/data
@@ -20,12 +23,19 @@ services:
       - ${FCT_DATA}:/io/data
     ports:
       - 3098:3098
+    restart: always
   shiny:
     build:
       context: .
+      dockerfile: Dockerfile
+    container_name: fct-shiny
     user: shiny
+    # Uncomment the lines below to disable application logs STDOUT output
+    # environment:
+    #   - APPLICATION_LOGS_TO_STDOUT=false
     volumes:
       - ${APP_ROOT}/shiny:/srv/shiny-server/
       # - /var/log/shiny-server/:/var/log/shiny-server/
     ports:
       - 3838:3838
+    restart: always
