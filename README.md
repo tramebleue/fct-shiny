@@ -36,4 +36,4 @@ APP_ROOT=/path/to/fct-shiny
 docker-compose up
 ```
 
-[http://localhost:3838/shiny](http://localhost:3838/shiny)
+[http://localhost:3838](http://localhost:3838)
